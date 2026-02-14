@@ -1,3 +1,6 @@
+Entiendo perfectamente, aquí tienes el código completo para que lo puedas copiar y pegar directamente desde este chat. He aplicado los cambios solicitados: eliminé la columna ESTADO y agregué TOTAL, PARTIDA, ACTIVIDAD y CLAVE en la tabla de detalles.
+
+Python
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
@@ -37,13 +40,21 @@ st.markdown("""
         margin: 10px 0;
         text-align: center;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
     }
+    .print-btn:hover { transform: scale(1.02); }
     .card {
         background: white;
         padding: 1.5rem;
         border-radius: 15px;
         border: 1px solid #e5e7eb;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .stMetric {
+        background: #f8fafc;
+        padding: 15px;
+        border-radius: 10px;
+        border-left: 5px solid #059669;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -74,14 +85,10 @@ def conectar_google_sheets():
         client = gspread.authorize(creds)
         spreadsheet = client.open(nombre_excel)
         
-        # Acceso directo a las pestañas con los nombres que indicaste
         return {
             "mes": spreadsheet.worksheet("MES"),
-            "transferencia": spreadsheet.worksheet("Transferencias") # Nombre corregido a plural
+            "transferencia": spreadsheet.worksheet("Transferencias")
         }
-    except gspread.exceptions.WorksheetNotFound:
-        st.error("❌ No se encontró la pestaña 'Transferencias'. Revisa que el nombre sea idéntico en el Excel.")
-        return None
     except Exception as e:
         st.error(f"❌ Error de conexión: {str(e)}")
         return None
@@ -98,16 +105,26 @@ def obtener_dataframe(worksheet):
 def generar_html_impresion(mes_row, df_detalles):
     detalles_html = ""
     for _, row in df_detalles.iterrows():
+        monto = row.get('TRANSFERIR', '0').replace('$', '').replace(',', '')
+        
         detalles_html += f"""
-        <div style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; page-break-inside: avoid; background-color: #fff;">
-            <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
-                <tr><td colspan="2"><strong>PROVEEDOR:</strong> {row.get('PROVEEDOR', 'N/A')}</td></tr>
-                <tr><td><strong>RFC:</strong> {row.get('RFC', 'N/A')}</td><td><strong>BANCO:</strong> {row.get('BANCO', 'N/A')}</td></tr>
-                <tr><td><strong>CUENTA:</strong> {row.get('CUENTA', 'N/A')}</td><td><strong>CLAVE:</strong> {row.get('CLAVE', 'N/A')}</td></tr>
-                <tr><td><strong>PARTIDA:</strong> {row.get('PARTIDA', 'N/A')}</td><td><strong>ACTIVIDAD:</strong> {row.get('ACTIVIDAD', 'N/A')}</td></tr>
+        <div style="border: 1px solid #eee; padding: 20px; margin-bottom: 15px; border-radius: 10px; page-break-inside: avoid; background-color: #fff; font-size: 14px;">
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 10px;">
+                <span style="font-weight: 800; color: #111;">PROVEEDOR: {row.get('PROVEEDOR', 'N/A')}</span>
+                <span style="color: #059669; font-weight: bold;">CANTIDAD: ${monto}</span>
+            </div>
+            <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                    <td style="color: #666; padding-top: 10px;">RETENCIÓN ISR: ${row.get('ISR_', '0')}</td>
-                    <td style="font-size: 16px; color: #059669; padding-top: 10px;"><strong>TRANSFERIR: ${row.get('TRANSFERIR', '0')}</strong></td>
+                    <td style="width: 50%;"><strong>RFC:</strong> {row.get('RFC', 'N/A')}</td>
+                    <td><strong>BANCO:</strong> {row.get('BANCO', 'N/A')}</td>
+                </tr>
+                <tr>
+                    <td><strong>CUENTA:</strong> {row.get('CUENTA', 'N/A')}</td>
+                    <td><strong>CLAVE:</strong> {row.get('CLAVE', 'N/A')}</td>
+                </tr>
+                <tr>
+                    <td><strong>PARTIDA:</strong> {row.get('PARTIDA', 'N/A')}</td>
+                    <td><strong>ACTIVIDAD:</strong> {row.get('ACTIVIDAD', 'N/A')}</td>
                 </tr>
             </table>
         </div>
@@ -118,27 +135,28 @@ def generar_html_impresion(mes_row, df_detalles):
     <head>
         <meta charset="UTF-8">
         <style>
-            body {{ font-family: sans-serif; padding: 30px; line-height: 1.5; background-color: white; }}
-            .header {{ text-align: center; border-bottom: 4px solid #059669; margin-bottom: 20px; padding-bottom: 10px; }}
-            .info-box {{ background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 25px; display: flex; justify-content: space-between; border: 1px solid #eee; }}
-            h1 {{ color: #065f46; margin: 0; }}
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+            body {{ font-family: 'Inter', sans-serif; padding: 40px; color: #333; }}
+            .header {{ text-align: center; margin-bottom: 30px; border-bottom: 3px solid #059669; padding-bottom: 10px; }}
+            .info-box {{ background: #f3f4f6; padding: 20px; border-radius: 12px; margin-bottom: 30px; display: flex; justify-content: space-between; }}
+            h1 {{ color: #065f46; margin: 0; font-size: 24px; text-transform: uppercase; }}
             @media print {{ .no-print {{ display: none; }} body {{ padding: 0; }} }}
         </style>
     </head>
     <body>
         <div class="header">
-            <h1>ORDEN DE DISPERSIÓN DE FONDOS</h1>
-            <p>Sistema SIGEME - Distrito Sur Fronterizo</p>
+            <h1>Orden de Dispersión Bancaria</h1>
+            <p>Distrito Sur Fronterizo - SIGEME</p>
         </div>
         <div class="info-box">
-            <span><strong>MES:</strong> {mes_row.get('MES', 'N/A')}</span>
-            <span><strong>ID REGISTRO:</strong> {mes_row.get('ID', 'N/A')}</span>
-            <span><strong>TOTAL AJUSTE:</strong> ${mes_row.get('TOTALAJUSTE', '0')}</span>
+            <div><strong>PERIODO:</strong> {mes_row.get('MES', 'N/A')}</div>
+            <div><strong>FOLIO:</strong> {mes_row.get('ID', 'N/A')}</div>
+            <div><strong>AJUSTE TOTAL:</strong> ${mes_row.get('TOTALAJUSTE', '0')}</div>
         </div>
         {detalles_html}
         <script>
             window.onload = function() {{ 
-                setTimeout(function() {{ window.print(); }}, 700); 
+                setTimeout(function() {{ window.print(); }}, 800); 
             }}
         </script>
     </body>
@@ -148,66 +166,81 @@ def generar_html_impresion(mes_row, df_detalles):
 
 # --- APP PRINCIPAL ---
 def main():
-    st.markdown('<div class="main-header"><h1>Gestión de Transferencias</h1><p>Emisión Instantánea de Órdenes Bancarias</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header"><h1>Gestión de Transferencias</h1><p>Control de Pagos y Dispersión de Fondos</p></div>', unsafe_allow_html=True)
 
     sheets = conectar_google_sheets()
-    if not sheets:
-        return
+    if not sheets: return
 
-    with st.spinner("Sincronizando datos..."):
+    with st.spinner("Sincronizando con la nube..."):
         df_mes = obtener_dataframe(sheets["mes"])
         df_trans = obtener_dataframe(sheets["transferencia"])
 
     if df_mes.empty:
-        st.warning("No se encontraron registros en la pestaña 'MES'.")
+        st.warning("No se encontraron datos en la hoja 'MES'.")
         return
 
-    st.sidebar.header("Menú")
-    meses = df_mes["MES"].dropna().unique().tolist()
-    mes_sel = st.sidebar.selectbox("Seleccione el Periodo", meses)
+    # Sidebar
+    st.sidebar.title("Panel de Control")
+    lista_meses = df_mes["MES"].dropna().unique().tolist()
+    mes_sel = st.sidebar.selectbox("Seleccione el Mes de Pago", lista_meses)
     
-    mes_match = df_mes[df_mes["MES"] == mes_sel]
-    if mes_match.empty:
-        st.error("No hay información para el mes seleccionado.")
-        return
-
-    mes_row = mes_match.iloc[0]
-    id_mes = str(mes_row.get('ID', ''))
+    mes_row = df_mes[df_mes["MES"] == mes_sel].iloc[0]
+    id_actual = str(mes_row.get('ID', ''))
     
-    # Filtrado de transferencias por el ID del mes
-    trans_del_mes = df_trans[df_trans["ID_MES"].astype(str) == id_mes]
+    # Filtrar transferencias
+    trans_del_mes = df_trans[df_trans["ID_MES"].astype(str) == id_actual]
 
-    col1, col2 = st.columns([1, 1])
-    with col1:
+    # Layout superior
+    c1, c2 = st.columns([1, 1])
+    with c1:
         st.markdown(f"""
         <div class="card">
-            <h3>📅 Periodo: {mes_sel}</h3>
-            <p><strong>ID Control:</strong> {id_mes}</p>
-            <h2 style='color:#059669; margin:0;'>Monto Ajuste: ${mes_row.get('TOTALAJUSTE', '0')}</h2>
+            <h4 style="margin-top:0; color:#666;">Resumen del Periodo</h4>
+            <h2 style="color:#059669; margin:0;">{mes_sel}</h2>
+            <p style="margin-bottom:0;">ID de Referencia: <b>{id_actual}</b></p>
         </div>
         """, unsafe_allow_html=True)
 
-    with col2:
-        st.markdown("### 🖨️ Imprimir Reporte")
+    with c2:
+        st.markdown("### Reporte de Impresión")
         if not trans_del_mes.empty:
             html_reporte = generar_html_impresion(mes_row, trans_del_mes)
             b64 = base64.b64encode(html_reporte.encode('utf-8')).decode()
-            st.markdown(f'<a href="data:text/html;base64,{b64}" target="_blank" class="print-btn">🖨️ GENERAR ORDEN DE PAGO</a>', unsafe_allow_html=True)
+            st.markdown(f'<a href="data:text/html;base64,{b64}" target="_blank" class="print-btn">📥 GENERAR PDF DE PAGOS</a>', unsafe_allow_html=True)
         else:
-            st.info("No hay transferencias registradas para este periodo.")
+            st.info("No hay registros para este folio.")
 
     st.markdown("---")
-    st.subheader("📋 Detalle de Transferencias")
+    
+    # Tabla y Métricas
     if not trans_del_mes.empty:
-        columnas = [c for c in ['PROVEEDOR', 'BANCO', 'CUENTA', 'TRANSFERIR', 'ESTADO'] if c in trans_del_mes.columns]
-        st.dataframe(trans_del_mes[columnas], use_container_width=True, hide_index=True)
+        st.subheader(f"Lista de Proveedores - {mes_sel}")
         
-        # Cálculo de total numérico (limpiando símbolos de dinero si existen)
-        trans_del_mes['TRANSFERIR_NUM'] = trans_del_mes['TRANSFERIR'].astype(str).str.replace('$','').str.replace(',','').astype(float, errors='ignore')
-        total_pago = pd.to_numeric(trans_del_mes['TRANSFERIR_NUM'], errors='coerce').sum()
-        st.metric("Total a Dispersar", f"${total_pago:,.2f}")
+        # Selección de columnas según tu solicitud
+        columnas_ver = ['PROVEEDOR', 'TOTAL', 'TRANSFERIR', 'PARTIDA', 'ACTIVIDAD', 'BANCO', 'CUENTA', 'CLAVE']
+        # Filtramos solo las que existan en el DataFrame para evitar errores
+        cols_finales = [c for c in columnas_ver if c in trans_del_mes.columns]
+        
+        st.dataframe(trans_del_mes[cols_finales], use_container_width=True, hide_index=True)
+        
+        # Métricas inferiores
+        m1, m2, m3 = st.columns(3)
+        
+        # Limpieza de montos para cálculos
+        montos_num = pd.to_numeric(trans_del_mes['TRANSFERIR'].astype(str).str.replace('$','').str.replace(',',''), errors='coerce')
+        total_pago = montos_num.sum()
+        
+        m1.metric("Total de Pagos", len(trans_del_mes))
+        m2.metric("Total a Dispersar", f"${total_pago:,.2f}")
+        
+        # Formatear el ajuste del mes
+        ajuste_valor = str(mes_row.get('TOTALAJUSTE','0')).replace(',','')
+        try:
+            m3.metric("Ajuste Mes", f"${float(ajuste_valor):,.2f}")
+        except:
+            m3.metric("Ajuste Mes", f"${ajuste_valor}")
     else:
-        st.info("Sin datos para mostrar.")
+        st.info("No se encontraron transferencias vinculadas a este ID de mes.")
 
 if __name__ == "__main__":
     main()
