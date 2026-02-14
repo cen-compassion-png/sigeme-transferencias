@@ -50,7 +50,6 @@ st.markdown("""
 
 # --- FUNCIÓN DE CONEXIÓN A GOOGLE SHEETS ---
 def conectar_google_sheets():
-    # NOMBRE DEL ARCHIVO CORREGIDO: trasnsferencias
     nombre_excel = "trasnsferencias"
     
     scopes = [
@@ -60,15 +59,11 @@ def conectar_google_sheets():
     
     try:
         creds = None
-        
-        # 1. Intentar cargar desde los Secrets de Streamlit
         if "gcp_service_account" in st.secrets:
             creds_info = dict(st.secrets["gcp_service_account"])
             if "private_key" in creds_info:
                 creds_info["private_key"] = creds_info["private_key"].replace("\\n", "\n")
             creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
-        
-        # 2. Intentar cargar desde archivo local
         elif os.path.exists("credenciales.json"):
             creds = Credentials.from_service_account_file("credenciales.json", scopes=scopes)
         
@@ -79,14 +74,13 @@ def conectar_google_sheets():
         client = gspread.authorize(creds)
         spreadsheet = client.open(nombre_excel)
         
+        # Acceso directo a las pestañas con los nombres que indicaste
         return {
             "mes": spreadsheet.worksheet("MES"),
-            "proveedor": spreadsheet.worksheet("PROVEEDOR"),
-            "transferencia": spreadsheet.worksheet("Transferencia"),
-            "partidas": spreadsheet.worksheet("PARTIDAS")
+            "transferencia": spreadsheet.worksheet("Transferencias") # Nombre corregido a plural
         }
-    except gspread.exceptions.SpreadsheetNotFound:
-        st.error(f"⚠️ No se encontró el archivo: '{nombre_excel}'. Revisa el nombre en Google Drive.")
+    except gspread.exceptions.WorksheetNotFound:
+        st.error("❌ No se encontró la pestaña 'Transferencias'. Revisa que el nombre sea idéntico en el Excel.")
         return None
     except Exception as e:
         st.error(f"❌ Error de conexión: {str(e)}")
@@ -165,22 +159,30 @@ def main():
         df_trans = obtener_dataframe(sheets["transferencia"])
 
     if df_mes.empty:
-        st.warning("No se encontraron registros en la hoja de cálculo.")
+        st.warning("No se encontraron registros en la pestaña 'MES'.")
         return
 
     st.sidebar.header("Menú")
     meses = df_mes["MES"].dropna().unique().tolist()
     mes_sel = st.sidebar.selectbox("Seleccione el Periodo", meses)
     
-    mes_row = df_mes[df_mes["MES"] == mes_sel].iloc[0]
-    trans_del_mes = df_trans[df_trans["ID_MES"] == mes_row["ID"]]
+    mes_match = df_mes[df_mes["MES"] == mes_sel]
+    if mes_match.empty:
+        st.error("No hay información para el mes seleccionado.")
+        return
+
+    mes_row = mes_match.iloc[0]
+    id_mes = str(mes_row.get('ID', ''))
+    
+    # Filtrado de transferencias por el ID del mes
+    trans_del_mes = df_trans[df_trans["ID_MES"].astype(str) == id_mes]
 
     col1, col2 = st.columns([1, 1])
     with col1:
         st.markdown(f"""
         <div class="card">
             <h3>📅 Periodo: {mes_sel}</h3>
-            <p><strong>ID Control:</strong> {mes_row.get('ID', 'N/A')}</p>
+            <p><strong>ID Control:</strong> {id_mes}</p>
             <h2 style='color:#059669; margin:0;'>Monto Ajuste: ${mes_row.get('TOTALAJUSTE', '0')}</h2>
         </div>
         """, unsafe_allow_html=True)
@@ -192,7 +194,7 @@ def main():
             b64 = base64.b64encode(html_reporte.encode('utf-8')).decode()
             st.markdown(f'<a href="data:text/html;base64,{b64}" target="_blank" class="print-btn">🖨️ GENERAR ORDEN DE PAGO</a>', unsafe_allow_html=True)
         else:
-            st.info("No hay datos para este periodo.")
+            st.info("No hay transferencias registradas para este periodo.")
 
     st.markdown("---")
     st.subheader("📋 Detalle de Transferencias")
@@ -200,10 +202,12 @@ def main():
         columnas = [c for c in ['PROVEEDOR', 'BANCO', 'CUENTA', 'TRANSFERIR', 'ESTADO'] if c in trans_del_mes.columns]
         st.dataframe(trans_del_mes[columnas], use_container_width=True, hide_index=True)
         
-        total_pago = pd.to_numeric(trans_del_mes['TRANSFERIR'], errors='coerce').sum()
+        # Cálculo de total numérico (limpiando símbolos de dinero si existen)
+        trans_del_mes['TRANSFERIR_NUM'] = trans_del_mes['TRANSFERIR'].astype(str).str.replace('$','').str.replace(',','').astype(float, errors='ignore')
+        total_pago = pd.to_numeric(trans_del_mes['TRANSFERIR_NUM'], errors='coerce').sum()
         st.metric("Total a Dispersar", f"${total_pago:,.2f}")
     else:
-        st.info("Tabla vacía para este periodo.")
+        st.info("Sin datos para mostrar.")
 
 if __name__ == "__main__":
     main()
