@@ -50,17 +50,34 @@ st.markdown("""
 
 # --- FUNCIÓN DE CONEXIÓN A GOOGLE SHEETS ---
 def conectar_google_sheets():
-    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    # NOMBRE DEL ARCHIVO CORREGIDO: trasnsferencias
+    nombre_excel = "trasnsferencias"
+    
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    
     try:
-        if not os.path.exists("credenciales.json"):
-            st.error("Error: No se encontró el archivo 'credenciales.json'.")
+        creds = None
+        
+        # 1. Intentar cargar desde los Secrets de Streamlit
+        if "gcp_service_account" in st.secrets:
+            creds_info = dict(st.secrets["gcp_service_account"])
+            if "private_key" in creds_info:
+                creds_info["private_key"] = creds_info["private_key"].replace("\\n", "\n")
+            creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
+        
+        # 2. Intentar cargar desde archivo local
+        elif os.path.exists("credenciales.json"):
+            creds = Credentials.from_service_account_file("credenciales.json", scopes=scopes)
+        
+        if not creds:
+            st.error("No se detectaron credenciales de acceso.")
             return None
-        
-        creds = Credentials.from_service_account_file("credenciales.json", scopes=scopes)
+
         client = gspread.authorize(creds)
-        
-        # IMPORTANTE: El nombre debe coincidir exactamente con tu archivo en Drive
-        spreadsheet = client.open("transferencias")
+        spreadsheet = client.open(nombre_excel)
         
         return {
             "mes": spreadsheet.worksheet("MES"),
@@ -68,18 +85,23 @@ def conectar_google_sheets():
             "transferencia": spreadsheet.worksheet("Transferencia"),
             "partidas": spreadsheet.worksheet("PARTIDAS")
         }
+    except gspread.exceptions.SpreadsheetNotFound:
+        st.error(f"⚠️ No se encontró el archivo: '{nombre_excel}'. Revisa el nombre en Google Drive.")
+        return None
     except Exception as e:
-        st.error(f"Error al conectar con Google Sheets: {e}")
+        st.error(f"❌ Error de conexión: {str(e)}")
         return None
 
 def obtener_dataframe(worksheet):
-    data = worksheet.get_all_values()
-    if not data: return pd.DataFrame()
-    return pd.DataFrame(data[1:], columns=data[0])
+    try:
+        data = worksheet.get_all_values()
+        if not data: return pd.DataFrame()
+        return pd.DataFrame(data[1:], columns=data[0])
+    except:
+        return pd.DataFrame()
 
-# --- GENERADOR DEL REPORTE (HTML PARA IMPRESIÓN) ---
+# --- GENERADOR DEL REPORTE HTML ---
 def generar_html_impresion(mes_row, df_detalles):
-    """Simula el formato <<Start: [Related Transferencias]>> de AppSheet"""
     detalles_html = ""
     for _, row in df_detalles.iterrows():
         detalles_html += f"""
@@ -130,27 +152,26 @@ def generar_html_impresion(mes_row, df_detalles):
     """
     return html
 
-# --- APLICACIÓN PRINCIPAL ---
+# --- APP PRINCIPAL ---
 def main():
     st.markdown('<div class="main-header"><h1>Gestión de Transferencias</h1><p>Emisión Instantánea de Órdenes Bancarias</p></div>', unsafe_allow_html=True)
 
     sheets = conectar_google_sheets()
     if not sheets:
-        st.info("Asegúrate de configurar el archivo 'credenciales.json' y compartir el Excel.")
         return
 
-    with st.spinner("Cargando información..."):
+    with st.spinner("Sincronizando datos..."):
         df_mes = obtener_dataframe(sheets["mes"])
         df_trans = obtener_dataframe(sheets["transferencia"])
 
     if df_mes.empty:
-        st.warning("La pestaña MES está vacía.")
+        st.warning("No se encontraron registros en la hoja de cálculo.")
         return
 
-    st.sidebar.header("Menú de Control")
-    mes_sel = st.sidebar.selectbox("Seleccione el Periodo", df_mes["MES"].unique().tolist())
+    st.sidebar.header("Menú")
+    meses = df_mes["MES"].dropna().unique().tolist()
+    mes_sel = st.sidebar.selectbox("Seleccione el Periodo", meses)
     
-    # Lógica de relación: ID de MES -> ID_MES en Transferencia
     mes_row = df_mes[df_mes["MES"] == mes_sel].iloc[0]
     trans_del_mes = df_trans[df_trans["ID_MES"] == mes_row["ID"]]
 
@@ -159,32 +180,30 @@ def main():
         st.markdown(f"""
         <div class="card">
             <h3>📅 Periodo: {mes_sel}</h3>
-            <p><strong>ID:</strong> {mes_row.get('ID', 'N/A')}</p>
+            <p><strong>ID Control:</strong> {mes_row.get('ID', 'N/A')}</p>
             <h2 style='color:#059669; margin:0;'>Monto Ajuste: ${mes_row.get('TOTALAJUSTE', '0')}</h2>
         </div>
         """, unsafe_allow_html=True)
 
     with col2:
-        st.markdown("### 🖨️ Generar Documento")
+        st.markdown("### 🖨️ Imprimir Reporte")
         if not trans_del_mes.empty:
             html_reporte = generar_html_impresion(mes_row, trans_del_mes)
             b64 = base64.b64encode(html_reporte.encode('utf-8')).decode()
-            st.markdown(f'<a href="data:text/html;base64,{b64}" target="_blank" class="print-btn">🖨️ ABRIR VISTA DE IMPRESIÓN</a>', unsafe_allow_html=True)
+            st.markdown(f'<a href="data:text/html;base64,{b64}" target="_blank" class="print-btn">🖨️ GENERAR ORDEN DE PAGO</a>', unsafe_allow_html=True)
         else:
-            st.error("No hay transferencias para este mes.")
+            st.info("No hay datos para este periodo.")
 
     st.markdown("---")
-    st.subheader("📋 Lista de Transferencias")
+    st.subheader("📋 Detalle de Transferencias")
     if not trans_del_mes.empty:
-        st.dataframe(trans_del_mes[['PROVEEDOR', 'BANCO', 'CUENTA', 'TRANSFERIR', 'ESTADO']], use_container_width=True, hide_index=True)
+        columnas = [c for c in ['PROVEEDOR', 'BANCO', 'CUENTA', 'TRANSFERIR', 'ESTADO'] if c in trans_del_mes.columns]
+        st.dataframe(trans_del_mes[columnas], use_container_width=True, hide_index=True)
         
-        m1, m2, m3 = st.columns(3)
         total_pago = pd.to_numeric(trans_del_mes['TRANSFERIR'], errors='coerce').sum()
-        m1.metric("Cant. Pagos", len(trans_del_mes))
-        m2.metric("Total a Dispersar", f"${total_pago:,.2f}")
-        m3.metric("Sincronización", "OK")
+        st.metric("Total a Dispersar", f"${total_pago:,.2f}")
     else:
-        st.info("Sin datos para mostrar.")
+        st.info("Tabla vacía para este periodo.")
 
 if __name__ == "__main__":
     main()
