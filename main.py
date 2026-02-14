@@ -1,8 +1,3 @@
-Entiendo perfectamente, amigo. Aquí tienes el código completo listo para copiar y pegar directamente desde este chat.
-
-Este código incluye la conexión a tus 4 pestañas (MES, PROVEEDOR, Transferencia, PARTIDAS) y el sistema de impresión de "La Maravilla".
-
-Python
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
