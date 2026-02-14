@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "transferencias-487422",
+  "private_key_id": "a1daad2781c43d370a8933ba129b0e35e84fb015",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDK313YEYaUHcUK\n64JGrjQJx8PL/Mbte578C1HJcQxzsEW3b4FovCZICMFXlmIw7Tqtvh8OipJ6Eyto\nvVA6f6y39k5RFWrCHTD4wuBu1HfvksrQOR26b0Zt4YMW+tF8tWF8yQMpq53wkNyN\nic579IFtK8bhl1ZO2t3YqS9cnJXkI6ShrmylAga7HdmKprZ9wek8iXAkSDEI6wtj\nvPcV5DKyY0g4lNeUmpsSErhytL8hcrSGHHXsWIx4cAo+GLyhRooqgvGhAuwQHaDv\ndZnN3fZHSbJeGIgWcexXE+rhwJnWSIAxsVV5Aa3yqrCzkZhoIPExI+CLOsKrx2aI\nDYm++aIFAgMBAAECggEAJdbRMmSccSJ3VuDT8Pp7jspxiOnqMa/h2LmExPmevLJH\nYp476SzUyBFH/J36TQ1maTMhqEzs4rOSIGxVG0Amlz5r36BKxA99S5zPjyR2hVsg\nFIPeuWAZZxPNp1rbeXL8TrHQcvSFVjIyzPyD5KdXf6UPaJLZYIZepBN0V8YGCCHP\nq1KUGXAV404BpmYePOndxac8qp5T3wEZ8be5DHsy4+W+lhuA/g0vjCXsvF4O0hnZ\neg8cf/j3aHkbvbreptXWNdPfWdBl4MLgVrJ8kBd6EvyQPMQvIlkkA+qklWNrxUrl\nOOlIXHcMCsc1Zd23ODZlZItLkXmGK7o2emslW6adQQKBgQDvsexS730bUs1ZsvM5\nS5g95TiDhglKXbdhtzS1cQc9MW1JbGTG/wrlAqwg0QJjZtk0voDo51bCz4tLGasn\npozWDxpmmLzw9L27tGdl3FIisbJhh8N5K0HQHFvkuQfKy4JSUdwOGFuIe8HU0P22\n5JlHbfFWBayVS3/07HuP9brgRQKBgQDYrDZdwIKlSwyOeR92U3cF5GsUlzAm+4Sm\nWmK+Aj32s2IaQbuWz5nIWMOba+DA074/OFinKOH9ELDt+U9GYGs4JJm9Q9m72zH3\nOBMlLAXjavrg6WxdT/LZn+1RfrqTOZFC9mzTcXp+/6/wFo4uw1BsmE7LvhVZiLYv\naO2G2yg2wQKBgQDCuE+7sEJ6B/I6hF2Clh6/aY9XiXPSrf9jqmlvXLr8w0J8+0mD\nP32iPWGH50OBbPPXHUur6QNajzAhemDIfUy8ONjBsCMNvETGT/APl8RB2wmGobvy\nm2mDnwYn8QibfmgIZ+fUq4Twg1kbggwan+rFVFNSBpoFTqhMWDCo6n894QKBgHlf\nvvS1qnm9mMMWxrEaAEqksfdO2gJ8Usp9R2L5Dozr38ClodfRY2v/jVO7EqPx+Vig\nz8iT9kQ03WfxiJ771BQXLKgBIi9BkrPSDad9Ca9jdjYXjESZTIjsNZy5SPq//Mdu\nE3g+0UfjI0Ny3yMC9kJe74TibkNBeg0E0koA6n4BAoGAZVLwGplmlleiBca3gTUd\nv+j3fBe3+fLMt7B+XPa4/YkeoACT8VIrqnxZgCQguRxipqHdCaShbKMRZZbquYG5\nq6O5aRRTxjR9/vxc9N2ONoo9gpr0yRarviYH9G0n0d2PihxTRTy3YXxO026gK3xG\nt+WJOtokH00CQRt7SGKIG0M=\n-----END PRIVATE KEY-----\n",
+  "client_email": "transferencias@transferencias-487422.iam.gserviceaccount.com",
+  "client_id": "101032247112607420500",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/transferencias%40transferencias-487422.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
