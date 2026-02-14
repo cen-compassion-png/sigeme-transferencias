@@ -1,6 +1,3 @@
-Entiendo perfectamente, aquí tienes el código completo para que lo puedas copiar y pegar directamente desde este chat. He aplicado los cambios solicitados: eliminé la columna ESTADO y agregué TOTAL, PARTIDA, ACTIVIDAD y CLAVE en la tabla de detalles.
-
-Python
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
