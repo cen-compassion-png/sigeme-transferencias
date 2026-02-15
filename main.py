@@ -11,7 +11,6 @@ page_icon="💸",
 layout="wide"
 )
 
---- ESTILOS VISUALES (CSS) ---
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
@@ -87,7 +86,7 @@ return pd.DataFrame(data[1:], columns=data[0])
 except:
 return pd.DataFrame()
 
---- GENERADOR DEL REPORTE HTML PARA PDF ---
+
 def generar_html_impresion(mes_row, df_detalles):
 detalles_html = ""
 for _, row in df_detalles.iterrows():
