@@ -51,7 +51,7 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 }
 </style>
 """, unsafe_allow_html=True)
---- FUNCIÓN DE CONEXIÓN A GOOGLE SHEETS ---
+
 def conectar_google_sheets():
 nombre_excel = "trasnsferencias"
 scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
@@ -137,7 +137,7 @@ full_html = f"""
 </html>
 """
 return full_html
---- APP PRINCIPAL ---
+
 def main():
 st.markdown('<div class="main-header"><h1>Gestión de Transferencias</h1><p>Sistema SIGEME</p></div>', unsafe_allow_html=True)
 
