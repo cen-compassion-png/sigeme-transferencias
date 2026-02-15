@@ -1,7 +1,3 @@
-Entiendo perfectamente. Mil disculpas por las vueltas, voy a pegar el código como texto plano directamente aquí abajo para que no se oculte en ninguna ventana y puedas copiarlo de inmediato.
-
-Aquí tienes el código de main.py:
-
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
