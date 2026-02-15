@@ -42,8 +42,6 @@ st.markdown("""
         margin-top: 28px;
     }
 
-    /* Resaltado para la columna TRANSFERIR en la tabla */
-    /* Nota: Streamlit usa contenedores dinámicos, este CSS ayuda a identificar visualmente */
     .highlight-box {
         background-color: #fff7ed;
         padding: 15px;
@@ -72,9 +70,11 @@ def conectar_google_sheets():
         if not creds: return None
         client = gspread.authorize(creds)
         spreadsheet = client.open(nombre_excel)
+        
         return {
             "mes": spreadsheet.worksheet("MES"),
-            "transferencia": spreadsheet.worksheet("Transferencias")
+            "transferencia": spreadsheet.worksheet("Transferencias"),
+            "proveedores": spreadsheet.worksheet("PROVEEDOR")
         }
     except Exception as e:
         st.error(f"❌ Error de conexión: {str(e)}")
@@ -96,7 +96,7 @@ def generar_html_impresion(mes_row, df_detalles):
         detalles_html += f"""
         <div style="border: 1px solid #eee; padding: 20px; margin-bottom: 15px; border-radius: 10px; page-break-inside: avoid; background-color: #fff; font-size: 14px;">
             <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 10px;">
-                <span style="font-weight: 800; color: #111;">PROVEEDOR: {row.get('PROVEEDOR', 'N/A')}</span>
+                <span style="font-weight: 800; color: #111;">PROVEEDOR: {row.get('NOMBRE_REAL', 'N/A')}</span>
                 <span style="color: #059669; font-weight: bold;">TRANSFERIR: ${monto}</span>
             </div>
             <table style="width: 100%; border-collapse: collapse;">
@@ -124,27 +124,40 @@ def main():
     sheets = conectar_google_sheets()
     if not sheets: return
 
-    with st.spinner("Cargando información..."):
+    with st.spinner("Cargando información de proveedores y transferencias..."):
         df_mes = obtener_dataframe(sheets["mes"])
         df_trans = obtener_dataframe(sheets["transferencia"])
+        df_prov = obtener_dataframe(sheets["proveedores"])
 
-    if df_mes.empty:
-        st.warning("No hay datos en la hoja 'MES'.")
+    if df_mes.empty or df_trans.empty or df_prov.empty:
+        st.warning("Verifique que las pestañas MES, Transferencias y PROVEEDOR tengan datos.")
         return
+
+    # --- LÓGICA DE CRUCE: TRADUCIR ID A NOMBRE REAL ---
+    # En la pestaña PROVEEDOR, buscamos 'ID' y 'PROVEEDOR' (Nombre)
+    df_prov_lookup = df_prov[['ID', 'PROVEEDOR']].rename(columns={'PROVEEDOR': 'NOMBRE_REAL'})
+    
+    # En Transferencias, usamos la columna 'PROVEEDOR' (que contiene el ID) para el cruce
+    df_trans = df_trans.merge(
+        df_prov_lookup, 
+        left_on='PROVEEDOR', 
+        right_on='ID', 
+        how='left',
+        suffixes=('', '_lookup')
+    )
 
     # --- PANEL DE CONTROL (SUPERIOR) ---
     st.markdown("### ⚙️ Panel de Control")
     col_sel, col_btn = st.columns([2, 1])
     
     with col_sel:
-        # Ordenar meses del más reciente al más antiguo
         lista_meses = df_mes["MES"].dropna().unique().tolist()
-        lista_meses.reverse() 
+        lista_meses.reverse() # Más reciente a antiguo
         mes_sel = st.selectbox("Seleccione el Mes de Ofrenda", lista_meses)
     
     mes_row = df_mes[df_mes["MES"] == mes_sel].iloc[0]
     id_actual = str(mes_row.get('ID', ''))
-    trans_del_mes = df_trans[df_trans["ID_MES"].astype(str) == id_actual]
+    trans_del_mes = df_trans[df_trans["ID_MES"].astype(str) == id_actual].copy()
 
     with col_btn:
         if not trans_del_mes.empty:
@@ -158,12 +171,17 @@ def main():
     st.subheader("📋 Lista de Transferencias")
     
     if not trans_del_mes.empty:
-        # Orden solicitado: PROVEEDOR, RFC, BANCO, CUENTA, CLAVE, PARTIDA, ACTIVIDAD, TOTAL, TRANSFERIR
-        columnas_orden = ['PROVEEDOR', 'RFC', 'BANCO', 'CUENTA', 'CLAVE', 'PARTIDA', 'ACTIVIDAD', 'TOTAL', 'TRANSFERIR']
+        # Definimos el orden solicitado incluyendo RFC e insertando el nombre real
+        # Orden: PROVEEDOR (Nombre Real), RFC, BANCO, CUENTA, CLAVE, PARTIDA, ACTIVIDAD, TOTAL, TRANSFERIR
+        columnas_orden = ['NOMBRE_REAL', 'RFC', 'BANCO', 'CUENTA', 'CLAVE', 'PARTIDA', 'ACTIVIDAD', 'TOTAL', 'TRANSFERIR']
         cols_finales = [c for c in columnas_orden if c in trans_del_mes.columns]
+        
         df_final = trans_del_mes[cols_finales].copy()
+        
+        # Renombramos visualmente para el usuario
+        df_final = df_final.rename(columns={'NOMBRE_REAL': 'PROVEEDOR'})
 
-        # Resaltar la columna TRANSFERIR usando estilos de Pandas
+        # Función para resaltar la columna TRANSFERIR en color naranja
         def highlight_transferir(s):
             return ['background-color: #fb923c; color: white; font-weight: bold' if s.name == 'TRANSFERIR' else '' for _ in s]
 
@@ -173,7 +191,7 @@ def main():
             hide_index=True
         )
         
-        # Resumen monetario resaltado
+        # Resumen monetario al final
         montos_num = pd.to_numeric(df_final['TRANSFERIR'].astype(str).str.replace('$','').str.replace(',',''), errors='coerce')
         total_acumulado = montos_num.sum()
         st.markdown(f"""
