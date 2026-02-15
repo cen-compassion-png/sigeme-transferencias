@@ -17,41 +17,39 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    
     .main-header {
         background: linear-gradient(135deg, #065f46 0%, #059669 100%);
-        padding: 2.5rem;
+        padding: 2rem;
         border-radius: 20px;
         color: white;
         text-align: center;
         margin-bottom: 2rem;
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
+    
     .print-btn {
         background-color: #059669;
         color: white !important;
-        padding: 14px 28px;
+        padding: 12px 24px;
         border-radius: 10px;
         text-decoration: none;
         font-weight: bold;
         display: inline-block;
-        margin: 10px 0;
         text-align: center;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        transition: transform 0.2s;
+        width: 100%;
+        margin-top: 28px;
     }
-    .print-btn:hover { transform: scale(1.02); }
-    .card {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 15px;
-        border: 1px solid #e5e7eb;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .stMetric {
-        background: #f8fafc;
+
+    /* Resaltado para la columna TRANSFERIR en la tabla */
+    /* Nota: Streamlit usa contenedores dinámicos, este CSS ayuda a identificar visualmente */
+    .highlight-box {
+        background-color: #fff7ed;
         padding: 15px;
         border-radius: 10px;
-        border-left: 5px solid #059669;
+        border: 2px solid #fb923c;
+        margin-top: 10px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -59,11 +57,7 @@ st.markdown("""
 # --- FUNCIÓN DE CONEXIÓN A GOOGLE SHEETS ---
 def conectar_google_sheets():
     nombre_excel = "trasnsferencias"
-    
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive"
-    ]
+    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     
     try:
         creds = None
@@ -75,13 +69,9 @@ def conectar_google_sheets():
         elif os.path.exists("credenciales.json"):
             creds = Credentials.from_service_account_file("credenciales.json", scopes=scopes)
         
-        if not creds:
-            st.error("No se detectaron credenciales de acceso.")
-            return None
-
+        if not creds: return None
         client = gspread.authorize(creds)
         spreadsheet = client.open(nombre_excel)
-        
         return {
             "mes": spreadsheet.worksheet("MES"),
             "transferencia": spreadsheet.worksheet("Transferencias")
@@ -102,13 +92,12 @@ def obtener_dataframe(worksheet):
 def generar_html_impresion(mes_row, df_detalles):
     detalles_html = ""
     for _, row in df_detalles.iterrows():
-        monto = row.get('TRANSFERIR', '0').replace('$', '').replace(',', '')
-        
+        monto = row.get('TRANSFERIR', '0')
         detalles_html += f"""
         <div style="border: 1px solid #eee; padding: 20px; margin-bottom: 15px; border-radius: 10px; page-break-inside: avoid; background-color: #fff; font-size: 14px;">
             <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 10px;">
                 <span style="font-weight: 800; color: #111;">PROVEEDOR: {row.get('PROVEEDOR', 'N/A')}</span>
-                <span style="color: #059669; font-weight: bold;">CANTIDAD: ${monto}</span>
+                <span style="color: #059669; font-weight: bold;">TRANSFERIR: ${monto}</span>
             </div>
             <table style="width: 100%; border-collapse: collapse;">
                 <tr>
@@ -126,118 +115,74 @@ def generar_html_impresion(mes_row, df_detalles):
             </table>
         </div>
         """
-
-    html = f"""
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
-            body {{ font-family: 'Inter', sans-serif; padding: 40px; color: #333; }}
-            .header {{ text-align: center; margin-bottom: 30px; border-bottom: 3px solid #059669; padding-bottom: 10px; }}
-            .info-box {{ background: #f3f4f6; padding: 20px; border-radius: 12px; margin-bottom: 30px; display: flex; justify-content: space-between; }}
-            h1 {{ color: #065f46; margin: 0; font-size: 24px; text-transform: uppercase; }}
-            @media print {{ .no-print {{ display: none; }} body {{ padding: 0; }} }}
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <h1>Orden de Dispersión Bancaria</h1>
-            <p>Distrito Sur Fronterizo - SIGEME</p>
-        </div>
-        <div class="info-box">
-            <div><strong>PERIODO:</strong> {mes_row.get('MES', 'N/A')}</div>
-            <div><strong>FOLIO:</strong> {mes_row.get('ID', 'N/A')}</div>
-            <div><strong>AJUSTE TOTAL:</strong> ${mes_row.get('TOTALAJUSTE', '0')}</div>
-        </div>
-        {detalles_html}
-        <script>
-            window.onload = function() {{ 
-                setTimeout(function() {{ window.print(); }}, 800); 
-            }}
-        </script>
-    </body>
-    </html>
-    """
-    return html
+    return f"<html><body style='font-family:sans-serif;padding:40px;'>{detalles_html}</body></html>"
 
 # --- APP PRINCIPAL ---
 def main():
-    st.markdown('<div class="main-header"><h1>Gestión de Transferencias</h1><p>Control de Pagos y Dispersión de Fondos</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header"><h1>Gestión de Transferencias</h1><p>Sistema SIGEME</p></div>', unsafe_allow_html=True)
 
     sheets = conectar_google_sheets()
     if not sheets: return
 
-    with st.spinner("Sincronizando con la nube..."):
+    with st.spinner("Cargando información..."):
         df_mes = obtener_dataframe(sheets["mes"])
         df_trans = obtener_dataframe(sheets["transferencia"])
 
     if df_mes.empty:
-        st.warning("No se encontraron datos en la hoja 'MES'.")
+        st.warning("No hay datos en la hoja 'MES'.")
         return
 
-    # Sidebar
-    st.sidebar.title("Panel de Control")
-    lista_meses = df_mes["MES"].dropna().unique().tolist()
-    mes_sel = st.sidebar.selectbox("Seleccione el Mes de Pago", lista_meses)
+    # --- PANEL DE CONTROL (SUPERIOR) ---
+    st.markdown("### ⚙️ Panel de Control")
+    col_sel, col_btn = st.columns([2, 1])
+    
+    with col_sel:
+        # Ordenar meses del más reciente al más antiguo
+        lista_meses = df_mes["MES"].dropna().unique().tolist()
+        lista_meses.reverse() 
+        mes_sel = st.selectbox("Seleccione el Mes de Ofrenda", lista_meses)
     
     mes_row = df_mes[df_mes["MES"] == mes_sel].iloc[0]
     id_actual = str(mes_row.get('ID', ''))
-    
-    # Filtrar transferencias
     trans_del_mes = df_trans[df_trans["ID_MES"].astype(str) == id_actual]
 
-    # Layout superior
-    c1, c2 = st.columns([1, 1])
-    with c1:
-        st.markdown(f"""
-        <div class="card">
-            <h4 style="margin-top:0; color:#666;">Resumen del Periodo</h4>
-            <h2 style="color:#059669; margin:0;">{mes_sel}</h2>
-            <p style="margin-bottom:0;">ID de Referencia: <b>{id_actual}</b></p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with c2:
-        st.markdown("### Reporte de Impresión")
+    with col_btn:
         if not trans_del_mes.empty:
             html_reporte = generar_html_impresion(mes_row, trans_del_mes)
             b64 = base64.b64encode(html_reporte.encode('utf-8')).decode()
             st.markdown(f'<a href="data:text/html;base64,{b64}" target="_blank" class="print-btn">📥 GENERAR PDF DE PAGOS</a>', unsafe_allow_html=True)
-        else:
-            st.info("No hay registros para este folio.")
 
     st.markdown("---")
+
+    # --- LISTA DE TRANSFERENCIAS ---
+    st.subheader("📋 Lista de Transferencias")
     
-    # Tabla y Métricas
     if not trans_del_mes.empty:
-        st.subheader(f"Lista de Proveedores - {mes_sel}")
+        # Orden solicitado: PROVEEDOR, RFC, BANCO, CUENTA, CLAVE, PARTIDA, ACTIVIDAD, TOTAL, TRANSFERIR
+        columnas_orden = ['PROVEEDOR', 'RFC', 'BANCO', 'CUENTA', 'CLAVE', 'PARTIDA', 'ACTIVIDAD', 'TOTAL', 'TRANSFERIR']
+        cols_finales = [c for c in columnas_orden if c in trans_del_mes.columns]
+        df_final = trans_del_mes[cols_finales].copy()
+
+        # Resaltar la columna TRANSFERIR usando estilos de Pandas
+        def highlight_transferir(s):
+            return ['background-color: #fb923c; color: white; font-weight: bold' if s.name == 'TRANSFERIR' else '' for _ in s]
+
+        st.dataframe(
+            df_final.style.apply(highlight_transferir, axis=0),
+            use_container_width=True, 
+            hide_index=True
+        )
         
-        # Selección de columnas según tu solicitud
-        columnas_ver = ['PROVEEDOR', 'TOTAL', 'TRANSFERIR', 'PARTIDA', 'ACTIVIDAD', 'BANCO', 'CUENTA', 'CLAVE']
-        # Filtramos solo las que existan en el DataFrame para evitar errores
-        cols_finales = [c for c in columnas_ver if c in trans_del_mes.columns]
-        
-        st.dataframe(trans_del_mes[cols_finales], use_container_width=True, hide_index=True)
-        
-        # Métricas inferiores
-        m1, m2, m3 = st.columns(3)
-        
-        # Limpieza de montos para cálculos
-        montos_num = pd.to_numeric(trans_del_mes['TRANSFERIR'].astype(str).str.replace('$','').str.replace(',',''), errors='coerce')
-        total_pago = montos_num.sum()
-        
-        m1.metric("Total de Pagos", len(trans_del_mes))
-        m2.metric("Total a Dispersar", f"${total_pago:,.2f}")
-        
-        # Formatear el ajuste del mes
-        ajuste_valor = str(mes_row.get('TOTALAJUSTE','0')).replace(',','')
-        try:
-            m3.metric("Ajuste Mes", f"${float(ajuste_valor):,.2f}")
-        except:
-            m3.metric("Ajuste Mes", f"${ajuste_valor}")
+        # Resumen monetario resaltado
+        montos_num = pd.to_numeric(df_final['TRANSFERIR'].astype(str).str.replace('$','').str.replace(',',''), errors='coerce')
+        total_acumulado = montos_num.sum()
+        st.markdown(f"""
+            <div class="highlight-box">
+                <span style="color: #9a3412; font-size: 1.3rem;"><b>Total Real a Transferir en {mes_sel}:</b> ${total_acumulado:,.2f}</span>
+            </div>
+        """, unsafe_allow_html=True)
     else:
-        st.info("No se encontraron transferencias vinculadas a este ID de mes.")
+        st.info("No hay transferencias registradas para este periodo.")
 
 if __name__ == "__main__":
     main()
