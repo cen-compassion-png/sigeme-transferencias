@@ -5,7 +5,6 @@ import pandas as pd
 import base64
 import os
 
---- CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(
 page_title="SIGEME - Gestión de Transferencias",
 page_icon="💸",
