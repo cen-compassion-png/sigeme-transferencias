@@ -126,15 +126,14 @@ def generar_html_impresion(mes_row, df_detalles):
     <html>
     <head>
         <meta charset="UTF-8">
+        <title>Reporte de Pagos - SIGEME</title>
         <style>
-            body {{ font-family: sans-serif; padding: 30px; color: #333; }}
-            .btn-print {{ background: #059669; color: white; padding: 15px 30px; border-radius: 8px; cursor: pointer; border: none; font-weight: bold; width: 100%; margin-bottom: 20px; }}
+            body {{ font-family: sans-serif; padding: 20px; color: #333; }}
             .header-info {{ border-bottom: 3px solid #059669; margin-bottom: 20px; padding-bottom: 10px; }}
             @media print {{ .btn-print {{ display: none; }} body {{ padding: 0; }} }}
         </style>
     </head>
-    <body>
-        <button class="btn-print" onclick="window.print()">🖨️ CLIC AQUÍ PARA IMPRIMIR O GUARDAR PDF</button>
+    <body onload="window.print()">
         <div class="header-info">
             <h2 style="margin:0; color:#065f46;">Orden de Dispersión - SIGEME</h2>
             <p><strong>Periodo:</strong> {mes_row.get('MES', 'N/A')} | <strong>ID Folio:</strong> {mes_row.get('ID', 'N/A')}</p>
@@ -182,9 +181,10 @@ def main():
     with col_btn:
         if not trans_del_mes.empty:
             html_content = generar_html_impresion(mes_row, trans_del_mes)
-            b64_html = base64.b64encode(html_content.encode('utf-8')).decode()
-            href = f'<a href="data:text/html;base64,{b64_html}" target="_blank" class="print-btn">📂 GENERAR PDF DE PAGOS</a>'
+            b64 = base64.b64encode(html_content.encode()).decode()
+            href = f'<a href="data:text/html;base64,{b64}" target="_blank" class="print-btn">📂 ABRIR VISTA DE IMPRESIÓN</a>'
             st.markdown(href, unsafe_allow_html=True)
+            st.caption("Nota: Se abrirá una pestaña nueva con el formato listo para imprimir.")
 
     st.markdown("---")
 
